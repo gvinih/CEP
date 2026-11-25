@@ -400,10 +400,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div class="sm:col-span-2">
-                    <label class="block font-semibold text-slate-600 mb-1">Empresa / Cabeçalho Superior</label>
-                    <input type="text" id="rep-company" value="" placeholder="Nome da empresa (opcional — se vazio, será usado o logo)" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-minitab-blue">
                     <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <input type="file" id="rep-company-logo" accept="image/*" class="block w-full text-xs text-slate-600">
                         <button type="button" onclick="clearReportLogo()" class="px-2 py-1 text-xs border rounded-lg text-slate-600 hover:bg-slate-50">Remover logo</button>
                     </div>
                     <p class="text-[11px] text-slate-500 mt-1">O logo será exibido somente se o campo de empresa estiver vazio. Imagem até 2 MB.</p>
@@ -3662,10 +3659,7 @@
         }
 
         function buildReportPageHeader(meta, pageNum, totalPages = 3) {
-            const companyText = (meta.company || '').trim();
-            const logoMarkup = (!companyText && meta.companyLogo)
-                ? '<img id="report-company-logo-rendered" alt="Logo da empresa" style="display:block;max-width:180px;max-height:58px;width:auto;height:auto;object-fit:contain;">'
-                : (companyText ? `<div class="font-extrabold text-base tracking-tight text-slate-900 leading-none">${escapeHTML(companyText)}</div>` : '<div class="font-extrabold text-base tracking-tight text-slate-900 leading-none">CEP SYSTEM</div>');
+            const logoMarkup = '<img id="report-company-logo-rendered" src="LOGOREPORT.png" alt="Logo Progeral" style="display:block;max-width:180px;max-height:58px;width:auto;height:auto;object-fit:contain;">';
             return `
                 <table class="w-full border-collapse border border-black text-[10px] mb-2">
                     <tr>
@@ -3691,8 +3685,8 @@
             }
 
             const meta = {
-                company: document.getElementById('rep-company').value.trim(),
-                companyLogo: reportCompanyLogoData || 'LOGOREPORT.svg',
+                company: '',
+                companyLogo: 'LOGOREPORT.png',
                 partName: document.getElementById('rep-part-name').value.trim() || '-',
                 partCode: document.getElementById('rep-part-code').value.trim() || '-',
                 characteristic: document.getElementById('rep-characteristic').value.trim() || document.getElementById('spec-name').value || '-',
@@ -4039,7 +4033,7 @@
             const renderedLogos = document.querySelectorAll('#report-company-logo-rendered');
             renderedLogos.forEach((renderedLogo) => {
                 if (!meta.companyLogo) return;
-                renderedLogo.src = meta.companyLogo;
+                renderedLogo.src = 'LOGOREPORT.png';
                 renderedLogo.onload = () => { renderedLogo.style.display = 'block'; };
                 renderedLogo.onerror = () => { renderedLogo.style.display = 'none'; };
             });
