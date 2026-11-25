@@ -571,21 +571,13 @@
                             <span class="text-[11px] font-medium text-slate-600">Travar limite (Boundary)</span>
                         </label>
                     </div>
-                    <!-- Tamanho do Subgrupo -->
+                    <!-- Responsável (Substituiu o Subgrupo visualmente) -->
                     <div class="flex flex-col">
                         <label class="flex items-center gap-1 h-4 text-xs font-semibold text-slate-700 mb-1.5">
-                            <span>Subgrupo</span> <span class="text-slate-400 font-normal">(n)</span>
+                            <span>Responsável</span> <span class="text-slate-400 font-normal">(Elaborador)</span>
                         </label>
-                        <select id="subgroup-size" onchange="calculateCapability(); markDataModified();" class="w-full h-9 px-3 text-sm font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-minitab-blue bg-white">
-                            <option value="1">1 (Individual / I-MR)</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5" selected>5 (Padrão)</option>
-                            <option value="6">6</option>
-                            <option value="8">8</option>
-                            <option value="10">10</option>
-                        </select>
+                        <input type="text" id="spec-author" value="Engenharia de Processos" placeholder="Ex: João Silva" oninput="syncAuthorToReport(); markDataModified();" class="w-full h-9 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-minitab-blue bg-slate-50/50">
+                        <input type="hidden" id="subgroup-size" value="5">
                     </div>
                 </div>
             </div>
@@ -3347,13 +3339,14 @@
                 machine: (document.getElementById('spec-machine') ? document.getElementById('spec-machine').value : ''),
                 instrument: (document.getElementById('spec-instrument') ? document.getElementById('spec-instrument').value : ''),
                 instCode: (document.getElementById('spec-inst-code') ? document.getElementById('spec-inst-code').value : ''),
+                author: (document.getElementById('spec-author') ? document.getElementById('spec-author').value : ''),
                 specName: document.getElementById('spec-name').value,
                 lsl: document.getElementById('spec-lsl').value,
                 lslBound: document.getElementById('spec-lsl-bound').checked,
                 target: document.getElementById('spec-target').value,
                 usl: document.getElementById('spec-usl').value,
                 uslBound: document.getElementById('spec-usl-bound').checked,
-                subgroupSize: document.getElementById('subgroup-size').value,
+                subgroupSize: (document.getElementById('subgroup-size') ? document.getElementById('subgroup-size').value : '5'),
                 worksheetData: worksheetData.filter(v => v !== '' && v !== null && v !== undefined),
                 studyDatabase: studyDatabase
             };
@@ -3366,13 +3359,15 @@
             if (state.machine !== undefined && document.getElementById('spec-machine')) document.getElementById('spec-machine').value = state.machine;
             if (state.instrument !== undefined && document.getElementById('spec-instrument')) document.getElementById('spec-instrument').value = state.instrument;
             if (state.instCode !== undefined && document.getElementById('spec-inst-code')) document.getElementById('spec-inst-code').value = state.instCode;
+            if (state.author !== undefined && document.getElementById('spec-author')) document.getElementById('spec-author').value = state.author;
+            if (state.author !== undefined && document.getElementById('rep-author')) document.getElementById('rep-author').value = state.author;
             if (state.specName !== undefined) document.getElementById('spec-name').value = state.specName;
             if (state.lsl !== undefined) document.getElementById('spec-lsl').value = state.lsl;
             if (state.lslBound !== undefined) document.getElementById('spec-lsl-bound').checked = !!state.lslBound;
             if (state.target !== undefined) document.getElementById('spec-target').value = state.target;
             if (state.usl !== undefined) document.getElementById('spec-usl').value = state.usl;
             if (state.uslBound !== undefined) document.getElementById('spec-usl-bound').checked = !!state.uslBound;
-            if (state.subgroupSize !== undefined) document.getElementById('subgroup-size').value = state.subgroupSize;
+            if (state.subgroupSize !== undefined && document.getElementById('subgroup-size')) document.getElementById('subgroup-size').value = state.subgroupSize;
             if (Array.isArray(state.worksheetData)) {
                 worksheetData = [...state.worksheetData];
             }
@@ -3567,6 +3562,10 @@
 
             const instCodeInput = document.getElementById('spec-inst-code').value || '';
             if (instCodeInput) document.getElementById('rep-inst-code').value = instCodeInput;
+
+            const authorInput = (document.getElementById('spec-author') ? document.getElementById('spec-author').value : '') || '';
+            if (authorInput) document.getElementById('rep-author').value = authorInput;
+
             document.getElementById('report-config-modal').classList.remove('hidden');
         }
 
