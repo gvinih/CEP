@@ -1708,6 +1708,8 @@
             }).join('');
         }
 
+        let selectedBinIndex = null;
+
         function drawCapabilityChart(data, lsl, usl, target, lslBound, uslBound, mean, stdWithin, stdOverall) {
             const container = document.getElementById('capability-chart-container');
             if (!container) return;
@@ -1746,10 +1748,27 @@
 
             const y = d3.scaleLinear().domain([0, maxY]).range([innerH, 0]);
 
+            // Elemento de Tooltip Flutuante
+            const tooltip = d3.select(container).append('div')
+                .attr('id', 'hist-click-tooltip')
+                .attr('class', 'absolute z-20 hidden bg-slate-900/90 backdrop-blur-xs text-white text-xs rounded-xl py-2 px-3 shadow-xl pointer-events-none transition-all duration-150 border border-slate-700 font-sans')
+                .style('top', '10px')
+                .style('left', '10px');
+
             const svg = d3.select(container).append('svg')
                 .attr('width', width)
                 .attr('height', height)
-                .style('font-family', 'Inter, sans-serif');
+                .style('font-family', 'Inter, sans-serif')
+                .on('click', function(event) {
+                    if (event.target.tagName !== 'rect') {
+                        selectedBinIndex = null;
+                        g.selectAll('.hist-bar')
+                            .attr('fill', '#93c5fd')
+                            .attr('stroke', '#3b82f6')
+                            .attr('stroke-width', 1);
+                        tooltip.classed('hidden', true);
+                    }
+                });
 
             const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -1759,19 +1778,102 @@
                 .selectAll('line').attr('stroke', '#f1f5f9');
             g.selectAll('.domain').remove();
 
-            // Barras do Histograma
-            g.selectAll('rect')
+            // Barras do Histograma Interativas (Clique + Hover)
+            const bars = g.selectAll('.hist-bar')
                 .data(bins)
                 .enter()
                 .append('rect')
+                .attr('class', 'hist-bar transition-all duration-150 cursor-pointer')
                 .attr('x', d => x(d.x0) + 1)
                 .attr('y', d => y(d.length / (data.length * binWidth)))
                 .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 2))
                 .attr('height', d => innerH - y(d.length / (data.length * binWidth)))
-                .attr('fill', '#93c5fd')
-                .attr('fill-opacity', 0.55)
-                .attr('stroke', '#3b82f6')
-                .attr('stroke-width', 1);
+                .attr('fill', (d, i) => selectedBinIndex === i ? '#2563eb' : '#93c5fd')
+                .attr('fill-opacity', (d, i) => selectedBinIndex === i ? 0.95 : 0.6)
+                .attr('stroke', (d, i) => selectedBinIndex === i ? '#1d4ed8' : '#3b82f6')
+                .attr('stroke-width', (d, i) => selectedBinIndex === i ? 2.5 : 1)
+                .attr('rx', 2);
+
+            // Texto com a contagem de amostras no topo de cada coluna selecionada
+            const labels = g.selectAll('.hist-bar-label')
+                .data(bins)
+                .enter()
+                .append('text')
+                .attr('class', 'hist-bar-label font-mono font-bold')
+                .attr('x', d => (x(d.x0) + x(d.x1)) / 2)
+                .attr('y', d => Math.max(12, y(d.length / (data.length * binWidth)) - 6))
+                .attr('text-anchor', 'middle')
+                .attr('fill', '#1e40af')
+                .style('font-size', '11px')
+                .style('display', (d, i) => selectedBinIndex === i ? 'block' : (d.length > 0 && bins.length <= 10 ? 'block' : 'none'))
+                .text(d => d.length > 0 ? d.length : '');
+
+            // Eventos de clique e hover para saber quantas amostras tem ali
+            bars
+                .on('mouseenter', function(event, d) {
+                    d3.select(this)
+                        .attr('fill', '#3b82f6')
+                        .attr('fill-opacity', 0.85);
+
+                    const pct = ((d.length / data.length) * 100).toFixed(1);
+                    tooltip
+                        .classed('hidden', false)
+                        .html(`
+                            <div class="font-bold text-slate-100 flex items-center justify-between gap-3 mb-0.5">
+                                <span>Intervalo: ${d.x0.toFixed(3)} ~ ${d.x1.toFixed(3)}</span>
+                                <span class="bg-blue-500/40 text-blue-200 px-1.5 py-0.2 rounded font-mono text-[10px]">${pct}%</span>
+                            </div>
+                            <div class="text-sm font-bold text-white flex items-center gap-1.5 mt-1">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                                <span><strong>${d.length}</strong> amostra${d.length === 1 ? '' : 's'} nesta coluna</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 mt-1">Clique para fixar o destaque</div>
+                        `);
+
+                    const [pointerX, pointerY] = d3.pointer(event, container);
+                    tooltip
+                        .style('left', `${Math.min(width - 230, Math.max(10, pointerX - 100))}px`)
+                        .style('top', `${Math.max(10, pointerY - 75)}px`);
+                })
+                .on('mousemove', function(event) {
+                    const [pointerX, pointerY] = d3.pointer(event, container);
+                    tooltip
+                        .style('left', `${Math.min(width - 230, Math.max(10, pointerX - 100))}px`)
+                        .style('top', `${Math.max(10, pointerY - 75)}px`);
+                })
+                .on('mouseleave', function(event, d) {
+                    const idx = bins.indexOf(d);
+                    if (selectedBinIndex !== idx) {
+                        d3.select(this)
+                            .attr('fill', '#93c5fd')
+                            .attr('fill-opacity', 0.6);
+                    }
+                    if (selectedBinIndex === null) {
+                        tooltip.classed('hidden', true);
+                    }
+                })
+                .on('click', function(event, d) {
+                    event.stopPropagation();
+                    const idx = bins.indexOf(d);
+                    selectedBinIndex = (selectedBinIndex === idx) ? null : idx;
+
+                    // Atualiza estilos das barras
+                    bars
+                        .attr('fill', (b, i) => selectedBinIndex === i ? '#1d4ed8' : '#93c5fd')
+                        .attr('fill-opacity', (b, i) => selectedBinIndex === i ? 0.95 : 0.5)
+                        .attr('stroke', (b, i) => selectedBinIndex === i ? '#092D63' : '#3b82f6')
+                        .attr('stroke-width', (b, i) => selectedBinIndex === i ? 2.5 : 1);
+
+                    labels
+                        .style('display', (b, i) => selectedBinIndex === i ? 'block' : (b.length > 0 && bins.length <= 10 ? 'block' : 'none'))
+                        .attr('fill', (b, i) => selectedBinIndex === i ? '#1e3a8a' : '#475569')
+                        .style('font-weight', (b, i) => selectedBinIndex === i ? '800' : '600');
+
+                    const pct = ((d.length / data.length) * 100).toFixed(1);
+                    if (selectedBinIndex !== null) {
+                        showToast(`Coluna [${d.x0.toFixed(3)} ~ ${d.x1.toFixed(3)}]: ${d.length} amostra${d.length === 1 ? '' : 's'} (${pct}% do total)`, 'info');
+                    }
+                });
 
             // Curvas Normais (Dentro e Global)
             const curveX = d3.range(minX, maxX, (maxX - minX) / 180);
