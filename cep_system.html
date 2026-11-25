@@ -2656,9 +2656,10 @@
             }
         }
 
-        function calcCapabilityCI95(idxVal, n) {
-            if (isNaN(idxVal) || !isFinite(idxVal) || n < 3) return '-';
-            const se = Math.sqrt((1 / (9 * n)) + ((idxVal * idxVal) / (2 * (n - 1))));
+        function calcCapabilityCI95(idxVal, n, df = n - 1) {
+            // Aproximação normal para IC95%; df ajustado ao estimador de sigma.
+            if (isNaN(idxVal) || !isFinite(idxVal) || n < 3 || !isFinite(df) || df <= 0) return '-';
+            const se = Math.sqrt((1 / (9 * n)) + ((idxVal * idxVal) / (2 * df)));
             const low = Math.max(0, idxVal - 1.96 * se);
             const high = idxVal + 1.96 * se;
             return `[${low.toFixed(2)} ; ${high.toFixed(2)}]`;
@@ -2852,13 +2853,13 @@
             document.getElementById('stat-cpl').textContent = isNaN(cpl) ? '*' : cpl.toFixed(2);
             document.getElementById('stat-cpu').textContent = isNaN(cpu) ? '*' : cpu.toFixed(2);
             document.getElementById('stat-cpk').textContent = isNaN(cpk) ? '*' : cpk.toFixed(2);
-            document.getElementById('stat-cpk-ci').textContent = isNaN(cpk) ? '*' : calcCapabilityCI95(cpk, n);
+            document.getElementById('stat-cpk-ci').textContent = isNaN(cpk) ? '*' : calcCapabilityCI95(cpk, n, 0.62 * (n - 1));
 
             document.getElementById('stat-pp').textContent = isNaN(pp) ? '*' : pp.toFixed(2);
             document.getElementById('stat-ppl-ppu').textContent = `${isNaN(ppl) ? '*' : ppl.toFixed(2)} / ${isNaN(ppu) ? '*' : ppu.toFixed(2)}`;
             document.getElementById('stat-cpm').textContent = isNaN(cpm) ? '*' : cpm.toFixed(2);
             document.getElementById('stat-ppk').textContent = isNaN(ppk) ? '*' : ppk.toFixed(2);
-            document.getElementById('stat-ppk-ci').textContent = isNaN(ppk) ? '*' : calcCapabilityCI95(ppk, n);
+            document.getElementById('stat-ppk-ci').textContent = isNaN(ppk) ? '*' : calcCapabilityCI95(ppk, n, n - 1);
 
             document.getElementById('stat-mean').textContent = `${mean.toFixed(4)}${hasTarget ? ' / ' + targetRaw : ''}`;
             document.getElementById('stat-stds').textContent = `${stdWithin.toFixed(4)} / ${stdOverall.toFixed(4)}`;
