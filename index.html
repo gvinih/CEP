@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -141,7 +141,7 @@
                 </div>
             </div>
 
-            <!-- Navegação por Abas + Salvar Direto / Exportar / Abrir -->
+            <!-- Navegação por Abas + Salvar / Relatório -->
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1.5">
                     <button onclick="triggerSaveFlow()" id="btn-direct-save" class="h-9 bg-blue-600 hover:bg-blue-500 text-white border border-blue-300/40 px-3.5 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer whitespace-nowrap" title="Salvar estudo no banco de dados (Atalho: Ctrl + S)">
@@ -151,12 +151,6 @@
                     <button onclick="openReportModal()" class="h-9 bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-400/40 px-3.5 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer whitespace-nowrap" title="Gerar e imprimir relatório técnico formal em 3 páginas A4">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                         <span>Relatório</span>
-                    </button>
-                    <button onclick="openSaveModal()" class="h-9 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap" title="Salvar como / Exportar cópia (.html ou .json)">
-                        <span>Exportar</span>
-                    </button>
-                    <button onclick="openDirectProjectFile()" class="h-9 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap" title="Abrir arquivo .json e vincular para salvamento direto">
-                        <span>Abrir</span>
                     </button>
                     <input type="file" id="load-project-input" accept=".json" onchange="loadProjectFile(event)" class="hidden">
                 </div>
@@ -972,10 +966,6 @@
                         </span>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="openArchiveModal()" class="text-xs bg-minitab-blue hover:bg-minitab-dark text-white font-semibold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            <span>Salvar Estudo Atual no Histórico</span>
-                        </button>
                         <button onclick="exportDatabaseCSV()" class="text-xs bg-minitab-light hover:bg-blue-100 text-minitab-blue border border-blue-200 font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
                             Exportar Tabela (CSV)
                         </button>
