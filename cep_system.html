@@ -2436,10 +2436,12 @@
                 if (t8On && i >= t8K - 1) {
                     const win = primaryPoints.slice(i - t8K + 1, i + 1);
                     const allOutside1S = win.every(p => Math.abs((p.value - centerLine) / chartSigma) > 1);
-                    if (allOutside1S) {
+                    const hasAbove1S = win.some(p => (p.value - centerLine) / chartSigma > 1);
+                    const hasBelow1S = win.some(p => (p.value - centerLine) / chartSigma < -1);
+                    if (allOutside1S && hasAbove1S && hasBelow1S) {
                         pt.failedTests.push(8);
-                        pt.reasons.push(`Teste 8: ${t8K} pontos consecutivos > 1σ em ambos os lados (mistura)`);
-                        trendSummaries.add(`Teste 8 (Mistura): ${t8K} pontos consecutivos > 1σ de ambos os lados`);
+                        pt.reasons.push(`Teste 8: ${t8K} pontos > 1σ, com pontos acima e abaixo da linha central (mistura)`);
+                        trendSummaries.add(`Teste 8 (Mistura): ${t8K} pontos fora de ±1σ, presentes em ambos os lados`);
                     }
                 }
 
@@ -2825,7 +2827,7 @@
             let cpm = NaN;
             if (activeLSL && activeUSL && hasTarget) {
                 const sumSqTarget = d3.sum(data, v => Math.pow(v - targetRaw, 2));
-                const stdTarget = Math.sqrt(sumSqTarget / (n - 1)) || 1e-9;
+                const stdTarget = Math.sqrt(sumSqTarget / n) || 1e-9;
                 cpm = (uslRaw - lslRaw) / (6 * stdTarget);
             }
 
@@ -2905,7 +2907,7 @@
                     normHeroIcon.className = 'w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0';
                     normHeroIcon.textContent = '✓';
                     normHeroTitle.textContent = 'Dados Normais (Valor-p ≥ 0.05)';
-                    normHeroDesc.textContent = 'A hipótese de normalidade foi aceita (α = 0.05). Você pode prosseguir com a leitura do Cpk abaixo.';
+                    normHeroDesc.textContent = 'Não há evidência estatística suficiente para rejeitar a normalidade (α = 0.05). Avalie também o gráfico de probabilidade normal e a estabilidade do processo.';
                 } else {
                     pBadge.textContent = '⚠ Não Normal (p < 0.05)';
                     pBadge.className = 'text-[11px] font-sans px-2 py-1 mt-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-center font-semibold';
