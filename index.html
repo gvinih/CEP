@@ -2627,12 +2627,20 @@
         }
 
         function clearData() {
-            worksheetData = Array(35).fill('');
-            activeStudyId = null;
-            updateActiveStudyBadge();
-            renderSpreadsheet();
-            calculateCapability();
-            showToast('Planilha limpa.', 'info');
+            showConfirmModal({
+                title: 'Limpar a Planilha?',
+                message: 'Tem certeza que deseja apagar <strong>todos os dados</strong> da planilha?<br><span class="text-xs text-red-500 mt-1 block">Esta ação não pode ser desfeita.</span>',
+                confirmText: 'Sim, Limpar',
+                confirmClass: 'bg-red-600 hover:bg-red-700 text-white',
+                onConfirm: () => {
+                    worksheetData = Array(35).fill('');
+                    activeStudyId = null;
+                    updateActiveStudyBadge();
+                    renderSpreadsheet();
+                    calculateCapability();
+                    showToast('Planilha limpa.', 'info');
+                }
+            });
         }
 
         function updateActiveStudyBadge(sector = '', period = '') {
