@@ -3664,7 +3664,7 @@
         function buildReportPageHeader(meta, pageNum, totalPages = 3) {
             const companyText = (meta.company || '').trim();
             const logoMarkup = (!companyText && meta.companyLogo)
-                ? `<img src="${meta.companyLogo}" alt="Logo da empresa" style="max-width:100%;max-height:58px;object-fit:contain;">`
+                ? '<img id="report-company-logo-rendered" alt="Logo da empresa" style="display:block;max-width:180px;max-height:58px;width:auto;height:auto;object-fit:contain;">'
                 : (companyText ? `<div class="font-extrabold text-base tracking-tight text-slate-900 leading-none">${escapeHTML(companyText)}</div>` : '<div class="font-extrabold text-base tracking-tight text-slate-900 leading-none">CEP SYSTEM</div>');
             return `
                 <table class="w-full border-collapse border border-black text-[10px] mb-2">
@@ -4035,6 +4035,13 @@
             `;
 
             document.getElementById('print-report-pages').innerHTML = page1HTML + page2HTML + page3HTML;
+            // Atribui o logo diretamente ao DOM após renderizar os cabeçalhos para evitar falhas no HTML inline.
+            const renderedLogo = document.getElementById('report-company-logo-rendered');
+            if (renderedLogo && meta.companyLogo) {
+                renderedLogo.src = meta.companyLogo;
+                renderedLogo.onload = () => { renderedLogo.style.display = 'block'; };
+                renderedLogo.onerror = () => { renderedLogo.style.display = 'none'; };
+            }
             closeReportModal();
             document.getElementById('print-report-container').classList.remove('hidden');
 
