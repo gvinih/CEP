@@ -1200,6 +1200,25 @@
             reader.onerror = () => showToast('Não foi possível ler a imagem do logo.', 'error');
             reader.readAsDataURL(file);
         }
+        async function ensureReportLogoLoaded() {
+            if (reportCompanyLogoData) return reportCompanyLogoData;
+            const input = document.getElementById('rep-company-logo');
+            const file = input && input.files && input.files[0];
+            if (!file || !file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) return '';
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    reportCompanyLogoData = String(reader.result || '');
+                    const img = document.getElementById('rep-logo-preview-img');
+                    const preview = document.getElementById('rep-logo-preview');
+                    if (img) img.src = reportCompanyLogoData;
+                    if (preview) preview.classList.remove('hidden');
+                    resolve(reportCompanyLogoData);
+                };
+                reader.onerror = () => resolve('');
+                reader.readAsDataURL(file);
+            });
+        }
         function markDataModified() {
             setStatusIndicator('pending', 'Aguardando salvamento...');
         }
@@ -3663,7 +3682,8 @@
             `;
         }
 
-        function generateAndPreviewReport(triggerPrint = false) {
+        async function generateAndPreviewReport(triggerPrint = false) {
+            await ensureReportLogoLoaded();
             const data = getValidNumbers();
             if (data.length < 3) {
                 showToast('Dados insuficientes para gerar o relatório.', 'error');
