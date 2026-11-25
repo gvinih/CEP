@@ -3659,7 +3659,7 @@
         }
 
         function buildReportPageHeader(meta, pageNum, totalPages = 3) {
-            const logoMarkup = '<img id="report-company-logo-rendered" src="LOGOREPORT.png" alt="Logo Progeral" style="display:block;max-width:180px;max-height:58px;width:auto;height:auto;object-fit:contain;">';
+            const logoMarkup = '<img id="report-company-logo-rendered" src="IMG_2695.jpeg" alt="Logo Progeral" style="display:block;max-width:180px;max-height:58px;width:auto;height:auto;object-fit:contain;">';
             return `
                 <table class="w-full border-collapse border border-black text-[10px] mb-2">
                     <tr>
@@ -3686,7 +3686,7 @@
 
             const meta = {
                 company: '',
-                companyLogo: 'LOGOREPORT.png',
+                companyLogo: 'IMG_2695.jpeg',
                 partName: document.getElementById('rep-part-name').value.trim() || '-',
                 partCode: document.getElementById('rep-part-code').value.trim() || '-',
                 characteristic: document.getElementById('rep-characteristic').value.trim() || document.getElementById('spec-name').value || '-',
@@ -4033,7 +4033,7 @@
             const renderedLogos = document.querySelectorAll('#report-company-logo-rendered');
             renderedLogos.forEach((renderedLogo) => {
                 if (!meta.companyLogo) return;
-                renderedLogo.src = 'LOGOREPORT.png';
+                renderedLogo.src = 'IMG_2695.jpeg';
                 renderedLogo.onload = () => { renderedLogo.style.display = 'block'; };
                 renderedLogo.onerror = () => { renderedLogo.style.display = 'none'; };
             });
