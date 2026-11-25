@@ -4036,12 +4036,13 @@
 
             document.getElementById('print-report-pages').innerHTML = page1HTML + page2HTML + page3HTML;
             // Atribui o logo diretamente ao DOM após renderizar os cabeçalhos para evitar falhas no HTML inline.
-            const renderedLogo = document.getElementById('report-company-logo-rendered');
-            if (renderedLogo && meta.companyLogo) {
+            const renderedLogos = document.querySelectorAll('#report-company-logo-rendered');
+            renderedLogos.forEach((renderedLogo) => {
+                if (!meta.companyLogo) return;
                 renderedLogo.src = meta.companyLogo;
                 renderedLogo.onload = () => { renderedLogo.style.display = 'block'; };
                 renderedLogo.onerror = () => { renderedLogo.style.display = 'none'; };
-            }
+            });
             closeReportModal();
             document.getElementById('print-report-container').classList.remove('hidden');
 
