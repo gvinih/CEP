@@ -1290,8 +1290,8 @@
             if (!('showOpenFilePicker' in window)) { showToast('Use Chrome ou Edge no computador para conectar o arquivo.','error'); return; }
             try {
                 const [handle] = await window.showOpenFilePicker({types:[{description:'CEP_DATABASE JSON',accept:{'application/json':['.json']}}],multiple:false});
-                let permission = await handle.queryPermission({mode:'readwrite'});
-                if (permission !== 'granted') permission = await handle.requestPermission({mode:'readwrite'});
+                // Evita requestPermission em contexto de terceiros (GitHub Pages incorporado).
+                // A autorização de escrita será solicitada/validada durante a gravação real.
                 const text = await (await handle.getFile()).text();
                 const parsed = JSON.parse(text);
                 const state = parsed && parsed.schema === 'CEP_SYSTEM_SHARED_DB' ? parsed.state : parsed;
@@ -3071,9 +3071,8 @@
             }
             let writable = null;
             try {
-                let permission = await centralDatabaseHandle.queryPermission({mode:'readwrite'});
-                if (permission !== 'granted') permission = await centralDatabaseHandle.requestPermission({mode:'readwrite'});
-                if (permission !== 'granted') throw new Error('O navegador não autorizou escrita no arquivo. Reconecte o banco central e autorize.');
+                // Não solicitar requestPermission aqui: pode ser bloqueado em contexto de terceiros.
+                // createWritable abaixo é a operação que efetivamente valida/acessa a escrita.
                 const currentText = await (await centralDatabaseHandle.getFile()).text();
                 const parsed = JSON.parse(currentText);
                 const currentState = parsed && parsed.schema === 'CEP_SYSTEM_SHARED_DB' ? parsed.state : parsed;
