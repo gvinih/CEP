@@ -3066,31 +3066,38 @@
             persistToLocalStorage();
             if (!centralDatabaseHandle) {
                 setStatusIndicator('warning','Dados locais — banco central não conectado');
-                showToast('Salvo apenas neste navegador. Conecte o CEP_DATABASE.json para compartilhar.','warning');
-                return;
+                showToast('Estudo preservado localmente. Conecte o CEP_DATABASE.json para compartilhar.','warning');
+                return false;
             }
+            let writable = null;
             try {
                 let permission = await centralDatabaseHandle.queryPermission({mode:'readwrite'});
                 if (permission !== 'granted') permission = await centralDatabaseHandle.requestPermission({mode:'readwrite'});
-                if (permission !== 'granted') throw new Error('Permissão de escrita negada pelo navegador.');
+                if (permission !== 'granted') throw new Error('O navegador não autorizou escrita no arquivo. Reconecte o banco central e autorize.');
                 const currentText = await (await centralDatabaseHandle.getFile()).text();
                 const parsed = JSON.parse(currentText);
                 const currentState = parsed && parsed.schema === 'CEP_SYSTEM_SHARED_DB' ? parsed.state : parsed;
-                if (!currentState || !Array.isArray(currentState.studyDatabase)) throw new Error('Formato do banco central inválido.');
-                payload.studyDatabase = mergeStudyRecords(payload.studyDatabase, currentState.studyDatabase);
+                if (!currentState || !Array.isArray(currentState.studyDatabase)) throw new Error('Estrutura inválida: o JSON precisa conter "studyDatabase": [].');
+                // Concilia registros locais pendentes com os do arquivo central antes de gravar.
+                payload.studyDatabase = mergeStudyRecords(currentState.studyDatabase, payload.studyDatabase);
                 studyDatabase = payload.studyDatabase;
                 const serialized = JSON.stringify(centralDatabaseEnvelope(payload), null, 2);
-                const writable = await centralDatabaseHandle.createWritable();
+                writable = await centralDatabaseHandle.createWritable();
                 await writable.write(serialized);
                 await writable.close();
+                writable = null;
                 centralDatabaseBaseline = await centralDatabaseFingerprint(serialized);
                 persistToLocalStorage();
                 setStatusIndicator('saved','Banco central atualizado');
-                showToast('CEP_DATABASE.json atualizado.','success');
+                showToast('CEP_DATABASE.json atualizado com sucesso.','success');
+                return true;
             } catch (e) {
+                if (writable) { try { await writable.abort(); } catch (_) {} }
                 console.error('Falha ao gravar banco central:', e);
                 setStatusIndicator('warning','Falha no banco central');
-                showToast('Falha na gravação: ' + (e && e.message ? e.message : 'erro desconhecido') + '. Dados locais preservados.','error');
+                const detail = (e && e.message) ? e.message : String(e || 'erro desconhecido');
+                showToast('Falha na gravação do banco central: ' + detail + '. Histórico local preservado; não desconecte nem limpe o navegador.','error');
+                return false;
             }
         }
         function openArchiveModal() {
@@ -3122,7 +3129,7 @@
             document.getElementById('archive-modal').classList.add('hidden');
         }
 
-        function confirmArchiveStudy() {
+        async function confirmArchiveStudy() {
             const sector = document.getElementById('archive-sector-input').value.trim();
             const period = document.getElementById('archive-period-input').value.trim();
             const machine = document.getElementById('archive-machine-input').value.trim();
@@ -3183,7 +3190,7 @@
             }
 
             // Grava silenciosamente o banco completo atualizado no cep_dados.json
-            saveProjectDatabaseToFile();
+            await saveProjectDatabaseToFile();
         }
 
         function updateDatabaseCounterPill() {
