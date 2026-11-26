@@ -1019,6 +1019,7 @@
 
             <!-- Barra de Busca, Filtros e Exportação do Histórico -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-5">
+                <div class="mb-3 flex flex-wrap items-center gap-2"><button onclick="connectCentralDatabase()" class="px-3 py-2 text-xs font-bold rounded-lg bg-minitab-blue text-white">Conectar / Atualizar banco central</button><span id="central-db-status" class="text-xs text-slate-500">Banco central não conectado</span></div>
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-minitab-blue"></span>
@@ -1139,7 +1140,9 @@
         let worksheetData = [...DEFAULT_SAMPLE_DATA];
         let studyDatabase = [];
         let activeStudyId = null;
-        let directFileHandle = null; // Ponteiro direto do arquivo (estilo Excel no navegador)
+        let directFileHandle = null;
+        let centralDatabaseHandle = null;
+        let centralDatabaseBaseline = null; // Ponteiro direto do arquivo (estilo Excel no navegador)
         const LOCAL_STORAGE_KEY = 'statquality_cep_studio_v3';
 
         let isDataDirty = false;
@@ -1281,6 +1284,9 @@
         }
 
         // Abrir arquivo vinculando o ponteiro para salvamento direto posterior
+        function centralDatabaseEnvelope(state){return{schema:'CEP_SYSTEM_SHARED_DB',schemaVersion:1,revision:Date.now(),savedAt:new Date().toISOString(),state};}
+        async function centralDatabaseFingerprint(t){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+        async function connectCentralDatabase(){if(!('showOpenFilePicker'in window)){showToast('Use Chrome ou Edge no computador para conectar o arquivo.','error');return;}try{const[handle]=await window.showOpenFilePicker({types:[{description:'CEP_DATABASE JSON',accept:{'application/json':['.json']}}],multiple:false});const text=await(await handle.getFile()).text(),parsed=JSON.parse(text),state=parsed&&parsed.schema==='CEP_SYSTEM_SHARED_DB'?parsed.state:parsed;if(!state||!Array.isArray(state.studyDatabase))throw Error('Formato');centralDatabaseHandle=handle;centralDatabaseBaseline=await centralDatabaseFingerprint(text);studyDatabase=[...state.studyDatabase];persistToLocalStorage();renderDatabaseView();const el=document.getElementById('central-db-status');if(el)el.textContent='Conectado: '+handle.name+' ('+studyDatabase.length+' estudos)';setStatusIndicator('saved','Banco central conectado');showToast('Histórico do arquivo carregado.','success');}catch(e){if(e&&e.name==='AbortError')return;showToast('Arquivo inválido. Histórico local não foi substituído.','error');}}
         async function openDirectProjectFile() {
             if ('showOpenFilePicker' in window) {
                 try {
@@ -3025,36 +3031,13 @@
         }
 
         async function saveProjectDatabaseToFile() {
-            const payload = getCurrentProjectState();
-            persistToLocalStorage();
-
-            // Grava via backend local ou FileSystem
-            try {
-                const response = await fetch('/api/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    setStatusIndicator('saved', 'Salvo em cep_dados.json');
-                    showToast('Estudo salvo e cep_dados.json atualizado!', 'success');
-                    return;
-                }
-            } catch (e) {}
-
-            if (directFileHandle) {
-                try {
-                    const writable = await directFileHandle.createWritable();
-                    await writable.write(JSON.stringify(payload, null, 2));
-                    await writable.close();
-                    setStatusIndicator('saved', 'Salvo em ' + directFileHandle.name);
-                    showToast(`Estudo salvo em "${directFileHandle.name}"!`, 'success');
-                    return;
-                } catch (e) {}
-            }
-
-            setStatusIndicator('saved', 'Salvo');
-            showToast('Estudo salvo no banco de dados com sucesso!', 'success');
+            const payload=getCurrentProjectState();persistToLocalStorage();
+            if(!centralDatabaseHandle){setStatusIndicator('warning','Dados locais — banco central não conectado');showToast('Salvo apenas neste navegador. Conecte o CEP_DATABASE.json para compartilhar.','warning');return;}
+            try{const text=await(await centralDatabaseHandle.getFile()).text(),hash=await centralDatabaseFingerprint(text);
+            if(centralDatabaseBaseline&&hash!==centralDatabaseBaseline){setStatusIndicator('warning','Conflito — banco central alterado');showToast('Outro usuário alterou o arquivo. Reconecte/atualize antes de gravar.','error');return;}
+            const data=centralDatabaseEnvelope(payload),serialized=JSON.stringify(data,null,2),w=await centralDatabaseHandle.createWritable();await w.write(serialized);await w.close();centralDatabaseBaseline=await centralDatabaseFingerprint(serialized);
+            setStatusIndicator('saved','Banco central atualizado');showToast('CEP_DATABASE.json atualizado.','success');
+            }catch(e){setStatusIndicator('warning','Falha no banco central');showToast('Falha na gravação. Seus dados locais foram preservados.','error');}
         }
         function openArchiveModal() {
             const data = getValidNumbers();
