@@ -1286,7 +1286,31 @@
         // Abrir arquivo vinculando o ponteiro para salvamento direto posterior
         function centralDatabaseEnvelope(state){return{schema:'CEP_SYSTEM_SHARED_DB',schemaVersion:1,revision:Date.now(),savedAt:new Date().toISOString(),state};}
         async function centralDatabaseFingerprint(t){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');}
-        async function connectCentralDatabase(){if(!('showOpenFilePicker'in window)){showToast('Use Chrome ou Edge no computador para conectar o arquivo.','error');return;}try{const[handle]=await window.showOpenFilePicker({types:[{description:'CEP_DATABASE JSON',accept:{'application/json':['.json']}}],multiple:false});const text=await(await handle.getFile()).text(),parsed=JSON.parse(text),state=parsed&&parsed.schema==='CEP_SYSTEM_SHARED_DB'?parsed.state:parsed;if(!state||!Array.isArray(state.studyDatabase))throw Error('Formato');centralDatabaseHandle=handle;centralDatabaseBaseline=await centralDatabaseFingerprint(text);studyDatabase=[...state.studyDatabase];persistToLocalStorage();renderDatabaseView();const el=document.getElementById('central-db-status');if(el)el.textContent='Conectado: '+handle.name+' ('+studyDatabase.length+' estudos)';setStatusIndicator('saved','Banco central conectado');showToast('Histórico do arquivo carregado.','success');}catch(e){if(e&&e.name==='AbortError')return;showToast('Arquivo inválido. Histórico local não foi substituído.','error');}}
+        async function connectCentralDatabase() {
+            if (!('showOpenFilePicker' in window)) { showToast('Use Chrome ou Edge no computador para conectar o arquivo.','error'); return; }
+            try {
+                const [handle] = await window.showOpenFilePicker({types:[{description:'CEP_DATABASE JSON',accept:{'application/json':['.json']}}],multiple:false});
+                let permission = await handle.queryPermission({mode:'readwrite'});
+                if (permission !== 'granted') permission = await handle.requestPermission({mode:'readwrite'});
+                const text = await (await handle.getFile()).text();
+                const parsed = JSON.parse(text);
+                const state = parsed && parsed.schema === 'CEP_SYSTEM_SHARED_DB' ? parsed.state : parsed;
+                if (!state || !Array.isArray(state.studyDatabase)) throw new Error('Formato inválido');
+                studyDatabase = mergeStudyRecords(studyDatabase, state.studyDatabase);
+                centralDatabaseHandle = handle;
+                centralDatabaseBaseline = await centralDatabaseFingerprint(text);
+                persistToLocalStorage();
+                renderDatabaseView();
+                const el = document.getElementById('central-db-status');
+                if (el) el.textContent = 'Conectado: ' + handle.name + ' (' + studyDatabase.length + ' estudos)';
+                setStatusIndicator('saved','Banco central conectado');
+                showToast('Histórico local e central conciliados. Para gravar os registros pendentes, arquive/salve novamente.','success');
+            } catch(e) {
+                if (e && e.name === 'AbortError') return;
+                console.error('Erro ao conectar banco central:',e);
+                showToast('Falha ao conectar: ' + (e && e.message ? e.message : 'arquivo inválido'),'error');
+            }
+        }
         async function openDirectProjectFile() {
             if ('showOpenFilePicker' in window) {
                 try {
@@ -3030,14 +3054,44 @@
             openArchiveModal();
         }
 
+        function mergeStudyRecords(localRecords, remoteRecords) {
+            const merged = new Map();
+            (remoteRecords || []).forEach(r => { if (r && r.id) merged.set(r.id, r); });
+            (localRecords || []).forEach(r => { if (r && r.id) merged.set(r.id, r); });
+            return Array.from(merged.values()).sort((a,b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+        }
+
         async function saveProjectDatabaseToFile() {
-            const payload=getCurrentProjectState();persistToLocalStorage();
-            if(!centralDatabaseHandle){setStatusIndicator('warning','Dados locais — banco central não conectado');showToast('Salvo apenas neste navegador. Conecte o CEP_DATABASE.json para compartilhar.','warning');return;}
-            try{const text=await(await centralDatabaseHandle.getFile()).text(),hash=await centralDatabaseFingerprint(text);
-            if(centralDatabaseBaseline&&hash!==centralDatabaseBaseline){setStatusIndicator('warning','Conflito — banco central alterado');showToast('Outro usuário alterou o arquivo. Reconecte/atualize antes de gravar.','error');return;}
-            const data=centralDatabaseEnvelope(payload),serialized=JSON.stringify(data,null,2),w=await centralDatabaseHandle.createWritable();await w.write(serialized);await w.close();centralDatabaseBaseline=await centralDatabaseFingerprint(serialized);
-            setStatusIndicator('saved','Banco central atualizado');showToast('CEP_DATABASE.json atualizado.','success');
-            }catch(e){setStatusIndicator('warning','Falha no banco central');showToast('Falha na gravação. Seus dados locais foram preservados.','error');}
+            const payload = getCurrentProjectState();
+            persistToLocalStorage();
+            if (!centralDatabaseHandle) {
+                setStatusIndicator('warning','Dados locais — banco central não conectado');
+                showToast('Salvo apenas neste navegador. Conecte o CEP_DATABASE.json para compartilhar.','warning');
+                return;
+            }
+            try {
+                let permission = await centralDatabaseHandle.queryPermission({mode:'readwrite'});
+                if (permission !== 'granted') permission = await centralDatabaseHandle.requestPermission({mode:'readwrite'});
+                if (permission !== 'granted') throw new Error('Permissão de escrita negada pelo navegador.');
+                const currentText = await (await centralDatabaseHandle.getFile()).text();
+                const parsed = JSON.parse(currentText);
+                const currentState = parsed && parsed.schema === 'CEP_SYSTEM_SHARED_DB' ? parsed.state : parsed;
+                if (!currentState || !Array.isArray(currentState.studyDatabase)) throw new Error('Formato do banco central inválido.');
+                payload.studyDatabase = mergeStudyRecords(payload.studyDatabase, currentState.studyDatabase);
+                studyDatabase = payload.studyDatabase;
+                const serialized = JSON.stringify(centralDatabaseEnvelope(payload), null, 2);
+                const writable = await centralDatabaseHandle.createWritable();
+                await writable.write(serialized);
+                await writable.close();
+                centralDatabaseBaseline = await centralDatabaseFingerprint(serialized);
+                persistToLocalStorage();
+                setStatusIndicator('saved','Banco central atualizado');
+                showToast('CEP_DATABASE.json atualizado.','success');
+            } catch (e) {
+                console.error('Falha ao gravar banco central:', e);
+                setStatusIndicator('warning','Falha no banco central');
+                showToast('Falha na gravação: ' + (e && e.message ? e.message : 'erro desconhecido') + '. Dados locais preservados.','error');
+            }
         }
         function openArchiveModal() {
             const data = getValidNumbers();
